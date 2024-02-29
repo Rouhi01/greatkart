@@ -12,3 +12,5 @@ class HomeView(View):
             'products':products
         }
         return render(request, self.template_name, context=context)
+
+
