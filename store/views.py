@@ -23,4 +23,13 @@ class StoreView(View):
         }
         return render(request, self.template_name, context=context)
 
+class ProductDetailView(View):
+    template_name = 'store/product_detail.html'
+    def get(self, request, category_slug, product_slug):
+        product = get_object_or_404(Product, slug=product_slug)
+        context = {
+            'product':product
+        }
+        return render(request, self.template_name, context)
+
 

@@ -2,7 +2,7 @@
 {% load humanize %}
 {% load static %}
 {% block title %}
-    <title>GreatKart | One of the Biggest Online Shopping Platform</title>
+    GreatKart | One of the Biggest Online Shopping Platform
 {% endblock %}
 {% block content %}
     <!-- ========================= SECTION MAIN ========================= -->
@@ -10,7 +10,7 @@
         <div class="container">
 
             <div class="intro-banner-wrap">
-                <img src="{% static 'img/banners/1.jpg' %}" class="img-fluid rounded">
+                <img src="{% static 'img/banners/cover.jpg' %}" class="img-fluid rounded">
             </div>
 
         </div> <!-- container //  -->
@@ -21,7 +21,7 @@
         <div class="container">
 
             <header class="section-heading">
-                <a href="#" class="btn btn-outline-primary float-right">See all</a>
+                <a href="{% url 'store:store' %}" class="btn btn-outline-primary float-right">See all</a>
                 <h3 class="section-title">Popular products</h3>
             </header><!-- sect-heading -->
 
@@ -30,9 +30,9 @@
                 {% for product in products %}
                     <div class="col-md-3">
                     <div class="card card-product-grid">
-                        <a href="./product-detail.html" class="img-wrap"> <img src="{{ product.image.url }}"> </a>
+                        <a href="{{ product.get_product_detail_url }}" class="img-wrap"> <img src="{{ product.image.url }}"> </a>
                         <figcaption class="info-wrap">
-                            <a href="./product-detail.html" class="title">{{ product.name }}</a>
+                            <a href="{{ product.get_product_detail_url }}" class="title">{{ product.name }}</a>
                             <div class="price mt-1">${{ product.price|intcomma }}</div> <!-- price-wrap.// -->
                         </figcaption>
                     </div>
