@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.views import View
 from .models import Product
 from category.models import Category
+from carts.models import CartItem, Cart
 
 
 class StoreView(View):
@@ -25,10 +26,17 @@ class StoreView(View):
 
 class ProductDetailView(View):
     template_name = 'store/product_detail.html'
+    def _cart_id(self, request):
+        cart = request.session.session_key
+        if not cart:
+            cart = request.session.create()
+        return cart
     def get(self, request, category_slug, product_slug):
         product = get_object_or_404(Product, slug=product_slug)
+        in_cart = CartItem.objects.filter(cart__cart_id=self._cart_id(request), product=product).exists()
         context = {
-            'product':product
+            'product':product,
+            'in_cart':in_cart,
         }
         return render(request, self.template_name, context)
 
