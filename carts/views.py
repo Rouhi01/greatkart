@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from store.models import Product
 from .models import CartItem, Cart
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class CartView(View):
@@ -11,7 +12,7 @@ class CartView(View):
         if not cart:
             cart = request.session.create()
         return cart
-    def get(self, request, total=0, quantity=0, cart_items=None):
+    def get(self, request, total=0, quantity=0, cart_items=None, tax=0, grand_total=0):
         try:
             cart = Cart.objects.get(cart_id=self._cart_id(request))
             cart_items = CartItem.objects.filter(cart=cart, is_active=True)
@@ -20,7 +21,7 @@ class CartView(View):
                 quantity += cart_item.quantity
             tax = (2 * total)/100
             grand_total = total + tax
-        except:
+        except ObjectDoesNotExist:
             pass
         context = {
             'total':total,
