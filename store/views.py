@@ -4,6 +4,7 @@ from .models import Product
 from category.models import Category
 from carts.models import CartItem, Cart
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import Q
 
 
 class StoreView(View):
@@ -54,3 +55,16 @@ class ProductDetailView(View):
         return render(request, self.template_name, context)
 
 
+class SearchView(View):
+    template_name = 'store/store.html'
+    def get(self, request):
+        if 'keyword' in request.GET:
+            keyword = request.GET['keyword']
+            if keyword:
+                products = Product.objects.filter(Q(description__icontains=keyword) | Q(name__icontains=keyword)).order_by('-created_at')
+                product_count = products.count()
+        context = {
+            'products':products,
+            'product_count':product_count,
+        }
+        return render(request, self.template_name, context)
