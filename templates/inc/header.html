@@ -67,7 +67,7 @@
                             <div class="widget-header">
                                 <small class="title text-muted">Welcome <strong>{{ request.user.first_name }}</strong></small>
                                 <div>
-                                    <a href="#">Dashboard</a> <span class="dark-transp"> | </span>
+                                    <a href="{% url 'accounts:dashboard' %}">Dashboard</a> <span class="dark-transp"> | </span>
                                     <a href="{% url 'accounts:logout' %}"> Logout</a>
                                 </div>
                             </div>

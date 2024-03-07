@@ -5,6 +5,9 @@ from .models import Account
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.mixins import LoginRequiredMixin
+from accounts.utils import user_activation
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
 
 
 class RegisterView(View):
@@ -37,8 +40,12 @@ class RegisterView(View):
             )
             user.phone_number = cd['phone_number']
             user.save()
-            messages.success(request, 'Registration successful.')
-            return redirect('accounts:register')
+            # messages.success(request, 'Email was sent.')
+            # User activation
+            user_activation(request, cd['email'], user)
+
+            # messages.success(request, 'THank you for registering with us. We have sent you a verification email to your email address. Please verify it.')
+            return redirect(f'/accounts/login/?command=verification&email={cd["email"]}')
 
         context = {
             'form':form
@@ -64,7 +71,6 @@ class LoginView(View):
 
     def post(self, request):
         form = self.form_class(request.POST)
-        print(f'{form.errors}')
         if form.is_valid():
             cd = form.cleaned_data
             email = cd['email']
@@ -73,8 +79,8 @@ class LoginView(View):
             user = authenticate(email=email, password=password)
             if user is not None:
                 login(request, user)
-                # messages.success(request, 'You are now logged in.')
-                return redirect('home')
+                messages.success(request, 'You are now logged in.')
+                return redirect('accounts:dashboard')
             else:
                 messages.error(request, 'Invalid login credentials')
                 return redirect('accounts:login')
@@ -90,3 +96,27 @@ class LogoutView(LoginRequiredMixin, View):
         logout(request)
         messages.success(request, 'You are logged out.')
         return redirect('home')
+
+
+class ActivateView(View):
+    def get(self, request, uidb64, token):
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = Account.objects.get(pk=uid)
+        except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+            user = None
+        if user is not None and default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            messages.success(request, 'Congratulations! Your account is activated')
+            return redirect('accounts:login')
+        else:
+            messages.error(request, 'Invalid activation link')
+            return redirect('accounts:register')
+
+
+class DashboardView(LoginRequiredMixin, View):
+    template_name = 'accounts/dashboard.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
