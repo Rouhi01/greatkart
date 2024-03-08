@@ -1,0 +1,32 @@
+{% extends 'index.html' %}
+{% block title %}
+
+{% endblock %}
+{% block content %}
+    <section class="section-conten padding-y" style="min-height:84vh">
+        <!-- ============================ COMPONENT Forgot password   ================================= -->
+        <div class="card mx-auto" style="max-width: 600px; margin-top:100px;">
+            <div class="card-body">
+                <h4 class="card-title mb-4">Forgot password</h4>
+                {% include 'inc/messages.html' %}
+                <form action="{% url 'accounts:pass_reset' %}" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <input type="email" placeholder="Enter email" class="form-control" name="email">
+                    </div> <!-- form-group// -->
+                    <div class="form-group">
+                        <a href="{% url 'accounts:login' %}" class="float-right">Got password? Login</a>
+
+                    </div> <!-- form-group form-check .// -->
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-block"> Submit</button>
+                    </div> <!-- form-group// -->
+                </form>
+            </div> <!-- card-body.// -->
+        </div> <!-- card .// -->
+
+        <p class="text-center mt-4">Don't have account? <a href="{% url 'accounts:register' %}">Sign up</a></p>
+        <br><br>
+        <!-- ============================ COMPONENT LOGIN  END.// ================================= -->
+    </section>
+{% endblock %}

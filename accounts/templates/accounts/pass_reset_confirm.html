@@ -1,0 +1,29 @@
+{% extends 'index.html' %}
+{% block title %}
+
+{% endblock %}
+{% block content %}
+    <section class="section-conten padding-y" style="min-height:84vh">
+        <!-- ============================ COMPONENT Forgot password   ================================= -->
+        <div class="card mx-auto" style="max-width: 600px; margin-top:100px;">
+            <div class="card-body">
+                <h4 class="card-title mb-4">Password Reset Confirm</h4>
+                {% include 'inc/messages.html' %}
+                <form action="{% url 'accounts:pass_reset_confirm' uidb64 token%}" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <input type="password" placeholder="New password" class="form-control" name="password">
+                    </div> <!-- form-group// -->
+                    <div class="form-group">
+                        <input type="password" placeholder="Confirm new password" class="form-control" name="confirm_password">
+                    </div> <!-- form-group// -->
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-block"> Reset Password</button>
+                    </div> <!-- form-group// -->
+                </form>
+            </div> <!-- card-body.// -->
+        </div> <!-- card .// -->
+
+        <!-- ============================ COMPONENT LOGIN  END.// ================================= -->
+    </section>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% autoescape off %}
+    You're receiving this email because you requested a password reset for your user account at 127.0.0.1:8000.
+    Please go to the following page and choose a new password:
+    http://{{ domain }}{% url 'accounts:pass_reset_confirm' uidb64=uid token=token %}
+    if you think it's not you, please ignore this email!!!
+    Thanks for using our site!
+{% endautoescape %}

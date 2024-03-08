@@ -1,13 +1,15 @@
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.views import View
 from .forms import RegistrationForm, LoginForm
 from .models import Account
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.mixins import LoginRequiredMixin
-from accounts.utils import user_activation
+from accounts.utils import user_activation, user_pass_reset
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
+
 
 
 class RegisterView(View):
@@ -120,3 +122,72 @@ class DashboardView(LoginRequiredMixin, View):
 
     def get(self, request):
         return render(request, self.template_name)
+
+
+class PassResetView(View):
+    template_name = 'accounts/pass_reset.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        email = request.POST['email']
+        user = Account.objects.filter(email=email).exists()
+        if user:
+            user = Account.objects.get(email__iexact=email)
+            user_pass_reset(request, email, user)
+            return redirect('accounts:pass_reset_done')
+
+        else:
+            messages.error(request, 'Account does not exist.')
+            return redirect('accounts:pass_reset')
+
+
+class PassResetDoneView(View):
+    template_name = 'accounts/pass_reset_done.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+
+class PassResetConfirmView(View):
+    template_name = 'accounts/pass_reset_confirm.html'
+
+    def get(self, request, uidb64, token):
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = Account.objects.get(pk=uid)
+        except (ValueError, Account.DoesNotExist, TypeError, OverflowError):
+            user = None
+        if user is not None and default_token_generator.check_token(user, token):
+            request.session['uid'] = uid
+            context = {
+                'uidb64':uidb64,
+                'token':token
+            }
+            return render(request, self.template_name, context)
+        else:
+            messages.error(request, 'This link has been expired!')
+            return redirect('accounts:login')
+
+
+    def post(self, request, uidb64, token):
+        password = request.POST['password']
+        confirm_password = request.POST['confirm_password']
+        if password == confirm_password:
+            uid = request.session.get('uid')
+            user = Account.objects.get(id=uid)
+            user.set_password(password)
+            user.save()
+            return redirect('accounts:pass_reset_complete')
+        else:
+            messages.error(request, 'Password do not match!')
+            return render(request, self.template_name)
+
+
+class PassResetCompleteView(View):
+    template_name = 'accounts/pass_reset_complete.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
