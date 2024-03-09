@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect
-from django.urls import reverse
 from django.views import View
 from .forms import RegistrationForm, LoginForm
 from .models import Account
@@ -9,6 +8,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from accounts.utils import user_activation, user_pass_reset
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
+from carts.models import Cart, CartItem
 
 
 
@@ -59,12 +59,24 @@ class LoginView(View):
     template_name = 'accounts/login.html'
     form_class = LoginForm
 
+    def _cart_id(self, request):
+        cart = request.session.session_key
+        if not cart:
+            cart = request.session.create()
+        return cart
+
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             return redirect('home')
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
+        try:
+            next_url = request.GET.get('next')
+            request.session['next_url'] = next_url
+        except:
+            pass
+
         form = self.form_class()
         context = {
             'form':form
@@ -80,9 +92,46 @@ class LoginView(View):
 
             user = authenticate(email=email, password=password)
             if user is not None:
+                try:
+                    cart = Cart.objects.get(cart_id=self._cart_id(request))
+                    is_cart_item_exists = CartItem.objects.filter(cart=cart).exists()
+                    if is_cart_item_exists:
+                        cart_items = CartItem.objects.filter(cart=cart)
+                        product_variation = []
+                        for item in cart_items:
+                            variation = item.variations.all()
+                            product_variation.append(list(variation))
+                        cart_items = CartItem.objects.filter(user=user)
+                        ex_var_list = []
+                        id = []
+                        for item in cart_items:
+                            variation = item.variations.all()
+                            ex_var_list.append(list(variation))
+                            id.append(item.id)
+
+                        for pr in product_variation:
+                            if pr in ex_var_list:
+                                index = ex_var_list.index(pr)
+                                item_id = id[index]
+                                item = CartItem.objects.get(id=item_id)
+                                item.quantity += 1
+                                item.user = user
+                                item.save()
+                            else:
+                                cart_items = CartItem.objects.filter(cart=cart)
+                                for item in cart_items:
+                                    item.user = user
+                                    item.save()
+                except:
+                    pass
                 login(request, user)
-                messages.success(request, 'You are now logged in.')
-                return redirect('accounts:dashboard')
+                try:
+                    next_url = request.session.get('next_url')
+                    messages.success(request, 'You are now logged in.')
+                    return redirect(next_url)
+                except:
+                    messages.success(request, 'You are now logged in.')
+                    return redirect('accounts:dashboard')
             else:
                 messages.error(request, 'Invalid login credentials')
                 return redirect('accounts:login')
@@ -127,6 +176,12 @@ class DashboardView(LoginRequiredMixin, View):
 class PassResetView(View):
     template_name = 'accounts/pass_reset.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            messages.error(request, 'You do not have access to this page')
+            return redirect('accounts:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request):
         return render(request, self.template_name)
 
@@ -146,12 +201,24 @@ class PassResetView(View):
 class PassResetDoneView(View):
     template_name = 'accounts/pass_reset_done.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            messages.error(request, 'You do not have access to this page')
+            return redirect('accounts:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request):
         return render(request, self.template_name)
 
 
 class PassResetConfirmView(View):
     template_name = 'accounts/pass_reset_confirm.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            messages.error(request, 'You do not have access to this page')
+            return redirect('accounts:dashboard')
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, uidb64, token):
         try:
@@ -187,6 +254,12 @@ class PassResetConfirmView(View):
 
 class PassResetCompleteView(View):
     template_name = 'accounts/pass_reset_complete.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            messages.error(request, 'You do not have access to this page')
+            return redirect('accounts:dashboard')
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
         return render(request, self.template_name)
