@@ -5,6 +5,7 @@ from .models import CartItem, Cart
 from django.core.exceptions import ObjectDoesNotExist
 from store.models import Variation
 from django.contrib.auth.mixins import LoginRequiredMixin
+from orders.forms import OrderForm
 
 
 class CartView(View):
@@ -192,6 +193,7 @@ class RemoveCartItemView(View):
 class CheckoutView(LoginRequiredMixin, View):
     template_name = 'carts/checkout.html'
     login_url = '/accounts/login'
+    form_class = OrderForm
 
     def _cart_id(self, request):
         cart = request.session.session_key
@@ -200,6 +202,7 @@ class CheckoutView(LoginRequiredMixin, View):
         return cart
 
     def get(self, request, total=0, quantity=0, cart_items=None, tax=0, grand_total=0):
+        form = self.form_class()
         try:
             if request.user.is_authenticated:
                 cart_items = CartItem.objects.filter(user=request.user, is_active=True)
@@ -218,6 +221,7 @@ class CheckoutView(LoginRequiredMixin, View):
             'quantity':quantity,
             'cart_items':cart_items,
             'tax':tax,
-            'grand_total':grand_total
+            'grand_total':grand_total,
+            'form':form
         }
         return render(request, self.template_name, context)
