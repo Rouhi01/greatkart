@@ -3,9 +3,14 @@ from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from carts.models import CartItem
 from .forms import OrderForm
-from .models import Order
+from .models import Order, Payment, OrderProduct
+from store.models import Product
 import datetime
 from django.contrib import messages
+import json
+
+from orders.utils import order_received_email
+from django.http import JsonResponse
 
 
 class PlaceOrderView(LoginRequiredMixin, View):
@@ -76,7 +81,87 @@ class PaymentsView(LoginRequiredMixin, View):
     template_name = 'orders/payments.html'
 
     def get(self, request):
-        return render(request, self.template_name)
+        body = json.loads(request.body)
+        order = Order.objects.get(user=request.user, is_ordered=False, order_number=body['order_id'])
+
+        # save transaction details inside Payment table
+        payment = Payment(
+            user = request.user,
+            payment_id=body['transID'],
+            payment_method=body['payment_method'],
+            amount_paid=order.order_total,
+            status=body['status'],
+        )
+        payment.save()
+
+        # update some field of Order table
+        order.payment = payment
+        order.is_ordered = True
+        order.save()
+
+        # Move the cart items to Order Product table
+        cart_items = CartItem.objects.filter(user=request.user)
+        for item in cart_items:
+            order_product = OrderProduct()
+            order_product.order_id = order.id
+            order_product.payment = payment
+            order_product.user_id = request.user.id
+            order_product.product_id = item.product_id
+            order_product.quantity = item.quantity
+            order_product.product_price = item.product_price
+            order_product.ordered = True
+            order_product.save()
+
+            cart_item = CartItem.objects.get(id=item.id)
+            product_variation = cart_item.variations.all()
+            order_product = OrderProduct.objects.get(id=order_product.id)
+            order_product.variations.set(product_variation)
+            order_product.save()
+
+            # Reduce the quantity of the sold products
+            product = Product.objects.get(id=item.product_id)
+            product.stock -= item.quantity
+            product.save()
+
+        # Clear cart
+        CartItem.objects.filter(user=request.user).delete()
+
+        # Send order received email to customer
+        order_received_email(request, order)
+
+        # Send order number and transaction id back to sendData method via JsonRequest
+        data = {
+            'order_number':order.order_number,
+            'transID':payment.payment_id,
+        }
+        return JsonResponse(data)
 
 
+class OrderCompleteView(LoginRequiredMixin, View):
+    template_name = 'orders/order_complete.html'
 
+    def get(self, reqeust):
+        order_number = reqeust.GET.get('order_number')
+        transID = reqeust.GET.get('payment_id')
+
+        try:
+            order = Order.objects.get(order_number=order_number, is_ordered=True)
+            ordered_products = OrderProduct.objects.filter(order_id=order.id)
+            sub_total = 0
+            for item in ordered_products:
+                sub_total += item.product_price * item.quantity
+            payment = Payment.objects.get(payment_id=transID)
+            context = {
+                'order':order,
+                'ordered_products':ordered_products,
+                'order_number':order.order_number,
+                'transID':payment.payment_id,
+                'payment':payment,
+                'sub_total':sub_total
+            }
+            return render(reqeust, self.template_name, context)
+        except (Payment.DoesNotExist, Order.DoesNotExist):
+            return redirect('home')
+
+    def post(self, request):
+        pass

@@ -44,3 +44,4 @@ def user_pass_reset(request, email, user):
         to=[to_email]
     )
     send_mail.send()
+
