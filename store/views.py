@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
-from .models import Product, ReviewRating
+from .models import Product, ReviewRating, ProductGallery
 from category.models import Category
 from carts.models import CartItem, Cart
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
@@ -52,6 +52,7 @@ class ProductDetailView(View):
         return cart
     def get(self, request, category_slug, product_slug):
         product = get_object_or_404(Product, slug=product_slug)
+        product_gallery = ProductGallery.objects.filter(product_id=product.id)
         try:
             reviews = ReviewRating.objects.get(user__id=request.user.id, product__slug=product_slug)
             form = self.form_class(instance=reviews)
@@ -76,7 +77,8 @@ class ProductDetailView(View):
             'in_cart':in_cart,
             'form':form,
             'order_product':order_product,
-            'reviews':reviews
+            'reviews':reviews,
+            'product_gallery':product_gallery
         }
         return render(request, self.template_name, context)
 

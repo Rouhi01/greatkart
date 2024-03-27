@@ -6,7 +6,6 @@ from category.models import Category
 from accounts.models import Account
 
 
-
 class Product(models.Model):
     name = models.CharField(max_length=200, unique=True)
     slug = models.SlugField(max_length=200, unique=True)
@@ -38,6 +37,18 @@ class Product(models.Model):
         if reviews['count'] is not None:
             count = int(reviews['count'])
         return count
+
+
+class ProductGallery(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='store/products/', max_length=255)
+
+    def __str__(self):
+        return self.product.name
+
+    class Meta:
+        verbose_name = 'productgallery'
+        verbose_name_plural = 'product gallery'
 
 variation_category_choice = (
     ('color', 'color'),
