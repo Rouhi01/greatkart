@@ -1,7 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
-from .forms import RegistrationForm, LoginForm
-from .models import Account
+from .forms import RegistrationForm, LoginForm, UserProfileForm, UserForm
+from .models import Account, UserProfile
+from orders.models import OrderProduct, Order
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -9,6 +10,7 @@ from accounts.utils import user_activation, user_pass_reset
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
 from carts.models import Cart, CartItem
+from orders.models import Order
 
 
 
@@ -131,7 +133,7 @@ class LoginView(View):
                     return redirect(next_url)
                 except:
                     messages.success(request, 'You are now logged in.')
-                    return redirect('accounts:dashboard')
+                    return redirect('accounts:`dashboar`d')
             else:
                 messages.error(request, 'Invalid login credentials')
                 return redirect('accounts:login')
@@ -170,7 +172,60 @@ class DashboardView(LoginRequiredMixin, View):
     template_name = 'accounts/dashboard.html'
 
     def get(self, request):
-        return render(request, self.template_name)
+        orders = Order.objects.order_by('-created_at').filter(user_id=request.user.id, is_ordered=True)
+        orders_count = orders.count()
+        user_profile = UserProfile.objects.get(user_id=request.user.id)
+        context = {
+            'orders':orders,
+            'orders_count':orders_count,
+            'user_profile':user_profile
+        }
+        return render(request, self.template_name, context)
+
+class MyOrdersView(LoginRequiredMixin, View):
+    template_name = 'accounts/my_orders.html'
+    def get(self, request):
+        orders = Order.objects.filter(user=request.user, is_ordered=True).order_by('-created_at')
+        context = {
+            'orders':orders
+        }
+        return render(request, self.template_name, context)
+
+
+class EditProfileView(LoginRequiredMixin, View):
+    template_name = 'accounts/edit_profile.html'
+    form_class1 = UserForm
+    form_class2 = UserProfileForm
+
+    def setup(self, request, *args, **kwargs):
+        self.user_profile = get_object_or_404(UserProfile, user=request.user)
+        return super().setup(request, *args, **kwargs)
+
+    def get(self, request):
+        user_form = self.form_class1(instance=request.user)
+        profile_form = self.form_class2(instance=self.user_profile)
+        context = {
+            'user_form':user_form,
+            'profile_form':profile_form,
+            'user_profile':self.user_profile
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        user_profile = get_object_or_404(UserProfile, user=request.user)
+
+        user_form = self.form_class1(request.POST, instance=request.user)
+        profile_form = self.form_class2(request.POST, request.FILES, instance=user_profile)
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Your profile has been updated.')
+            return redirect('accounts:edit_profile')
+        context = {
+            'user_form':user_form,
+            'profile_form':profile_form
+        }
+        return render(request, self.template_name, context)
 
 
 class PassResetView(View):
@@ -264,3 +319,46 @@ class PassResetCompleteView(View):
     def get(self, request):
         return render(request, self.template_name)
 
+
+class ChangePasswordView(LoginRequiredMixin, View):
+    template_name = 'accounts/change_password.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        current_password = request.POST['current_password']
+        new_password = request.POST['new_password']
+        confirm_password = request.POST['confirm_password']
+
+        user = Account.objects.get(username__exact=request.user.username)
+        if new_password == confirm_password:
+            success = user.check_password(current_password)
+            if success:
+                user.set_password(new_password)
+                user.save()
+                messages.success(request, 'Password updated successfully.')
+                return redirect('accounts:change_password')
+            else:
+                messages.error(request, 'Please enter valid current password.')
+                return redirect('accounts:change_password')
+        else:
+            messages.error(request, 'Password does not match!')
+            return redirect('accounts:change_password')
+
+
+class OrderDetailView(LoginRequiredMixin, View):
+    template_name = 'accounts/order_detail.html'
+
+    def get(self, request, order_id):
+        order_detail = OrderProduct.objects.filter(order__order_number=order_id)
+        order = Order.objects.get(order_number=order_id)
+        sub_total = 0
+        for i in order_detail:
+            sub_total += i.product_price * i.quantity
+        context = {
+            'order_detail': order_detail,
+            'order': order,
+            'sub_total':sub_total
+        }
+        return render(request, self.template_name, context)

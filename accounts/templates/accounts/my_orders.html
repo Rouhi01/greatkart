@@ -1,0 +1,62 @@
+{% extends 'index.html' %}
+{% load static %}
+{% block title %}
+
+{% endblock %}
+{% block content %}
+    <section class="section-conten padding-y bg">
+        {% include 'inc/messages.html' %}
+        <div class="container">
+            <div class="row">
+                <aside class="col-md-3">
+                    <!--   SIDEBAR   -->
+                    {% include 'accounts/inc/dashboard_sidebar.html' %}
+                    <br>
+                    <a class="btn btn-light btn-block" href="{% url 'accounts:logout' %}"> <i
+                            class="fa fa-power-off"></i> <span class="text">Log out</span>
+                    </a>
+                    <!--   SIDEBAR .//END   -->
+                </aside>
+                <main class="col-md-9">
+                    <article class="card">
+                        <header class="card-header">
+                            <strong class="d-inline-block mr-3">Your order history</strong>
+                        </header>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <table class="table table-hover">
+                                        <thead>
+                                        <tr>
+                                            <th scope="col">Order #</th>
+                                            <th scope="col">Billing Name</th>
+                                            <th scope="col">Phone</th>
+                                            <th scope="col">Order Total</th>
+                                            <th scope="col">Date</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for order in orders %}
+                                            <tr>
+
+                                                <th scope="row"><a href="{% url 'accounts:order_detail' order.order_number %}">{{ order.order_number }}</a></th>
+                                                <th>{{ order.full_name }}</th>
+                                                <th>{{ order.phone }}</th>
+                                                <th>{{ order.order_total }}</th>
+                                                <th>{{ order.created_at }}</th>
+                                            </tr>
+                                        {% endfor %}
+
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div> <!-- row.// -->
+                        </div> <!-- card-body .// -->
+                    </article> <!-- order-group.// -->
+                </main>
+            </div> <!-- row.// -->
+        </div>
+
+
+    </section>
+{% endblock %}
