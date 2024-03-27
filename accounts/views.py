@@ -133,7 +133,7 @@ class LoginView(View):
                     return redirect(next_url)
                 except:
                     messages.success(request, 'You are now logged in.')
-                    return redirect('accounts:`dashboar`d')
+                    return redirect('accounts:dashboard')
             else:
                 messages.error(request, 'Invalid login credentials')
                 return redirect('accounts:login')
@@ -174,7 +174,10 @@ class DashboardView(LoginRequiredMixin, View):
     def get(self, request):
         orders = Order.objects.order_by('-created_at').filter(user_id=request.user.id, is_ordered=True)
         orders_count = orders.count()
-        user_profile = UserProfile.objects.get(user_id=request.user.id)
+        try:
+            user_profile = UserProfile.objects.get(user_id=request.user.id)
+        except:
+            user_profile = None
         context = {
             'orders':orders,
             'orders_count':orders_count,
